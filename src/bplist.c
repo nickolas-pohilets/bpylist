@@ -2,12 +2,60 @@
 #include <pytime.h>
 #include <stdint.h>
 
+#if defined(_MSC_VER)
+#include <stdlib.h>
+#include <intrin.h>
+
+#define __builtin_expect(x, c) x
+#define __builtin_bswap16(x) _byteswap_ushort(x)
+#define __builtin_bswap32(x) _byteswap_ulong(x)
+#define __builtin_bswap64(x) _byteswap_uint64(x)
+
+#if _WIN64
+#pragma intrinsic(_BitScanReverse64)
+
+inline static int __builtin_clzll(unsigned long long x) {
+   unsigned long leading_zero = 0;
+    if (_BitScanReverse64(&leading_zero, x)) {
+        return 63 - leading_zero;
+    } else {
+        return 64;
+    }
+}
+#else
+#pragma intrinsic(_BitScanReverse)
+inline static int __builtin_clzll(unsigned long long x) {
+   unsigned long leading_zero = 0;
+   if (_BitScanReverse(&leading_zero, (unsigned long)(x >> 32))) {
+        return 31 - leading_zero;
+   } else if (_BitScanReverse(&leading_zero, (unsigned long)x)) {
+       return 63 - leading_zero;
+   } else {
+        return 64;
+   }
+}
+#endif // _WIN64
+
+#elif defined(__clang__)
+
+#if !__has_builtin(__builtin_bswap16)
+    #define __builtin_bswap16(x) ((x & 0x00FF) << 8) | ((x & 0xFF00) >> 8)
+#endif
+
+#elif defined(__GNUC__)
+
+#if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 8)
+    #define __builtin_bswap16(x) ((x & 0x00FF) << 8) | ((x & 0xFF00) >> 8)
+#endif
+
+#endif
+
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 
-    #define SwapBigToHost16(x) ((x & 0x00FF) << 8) | ((x & 0xFF00) >> 8)
+    #define SwapBigToHost16(x) __builtin_bswap16(x)
     #define SwapBigToHost32(x) __builtin_bswap32(x)
     #define SwapBigToHost64(x) __builtin_bswap64(x)
 
