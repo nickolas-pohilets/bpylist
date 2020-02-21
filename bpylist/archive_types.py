@@ -109,7 +109,6 @@ class MutableArray(list, Array, Mutable):
 class Set:
     "Delegate for packing/unpacking NS(Mutable)Set objects"
 
-    @classmethod
     def __new__(cls):
         return set()
 
